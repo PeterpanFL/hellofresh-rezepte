@@ -94,7 +94,12 @@ Deno.serve(async (req) => {
     return json({ error: "front and back (base64 JPEG) are required" }, 400)
   }
 
-  const client = new Anthropic() // reads ANTHROPIC_API_KEY
+  // Send the key as x-api-key, exactly like meter-ocr does (the SDK would otherwise send it as a bearer token).
+  const client = new Anthropic({
+    apiKey: null,
+    authToken: null,
+    defaultHeaders: { "x-api-key": Deno.env.get("ANTHROPIC_API_KEY")!.trim() },
+  })
   try {
     const response = await client.messages.parse({
       model: MODEL,
@@ -116,7 +121,8 @@ Deno.serve(async (req) => {
     if (error instanceof Anthropic.RateLimitError) return json({ error: "Rate limited, try again later" }, 429)
     if (error instanceof Anthropic.APIError) {
       console.error("Anthropic API error", error.status, error.message)
-      return json({ error: "Recognition failed" }, 502)
+      const hint = error.status === 401 ? "ANTHROPIC_API_KEY ungültig (Secret prüfen)" : `Claude-Fehler ${error.status}`
+      return json({ error: hint }, 502)
     }
     console.error("recipe-ocr failed", error)
     return json({ error: "Recognition failed" }, 500)

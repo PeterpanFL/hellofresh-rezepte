@@ -97,7 +97,12 @@ async function extractAndSave(id: string, front: Blob, back: Blob, onPhase: (p: 
     body: { front: await blobToBase64(front), back: await blobToBase64(back) },
   })
   if (error || !data?.recipe) {
-    const message = error?.message ?? 'Keine Daten erkannt'
+    let message = error?.message ?? 'Keine Daten erkannt'
+    // FunctionsHttpError carries the function's own JSON answer in `context`.
+    const ctx = (error as { context?: Response } | null)?.context
+    if (ctx && typeof ctx.json === 'function') {
+      try { message = (await ctx.json())?.error ?? message } catch { /* keep generic message */ }
+    }
     await supabase.from('recipes').update({ status: 'failed', extraction_error: message }).eq('id', id)
     onPhase('error')
     throw new Error(`Auslesen fehlgeschlagen: ${message}`)
