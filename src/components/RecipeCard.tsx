@@ -9,7 +9,7 @@ export function minutesLabel(r: Pick<Recipe, 'minutes_min' | 'minutes_max'>) {
 
 const STATUS: Record<Recipe['status'], { label: string; cls: string } | null> = {
   new: { label: 'wird gelesen', cls: 'bg-stone-200 text-stone-700' },
-  extracted: { label: 'ungeprüft', cls: 'bg-amber-100 text-amber-900' },
+  extracted: null,
   checked: null,
   failed: { label: 'Fehler', cls: 'bg-red-100 text-red-800' },
 }

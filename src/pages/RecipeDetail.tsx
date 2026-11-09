@@ -40,12 +40,6 @@ export default function RecipeDetail() {
     qc.invalidateQueries({ queryKey: ['recipes'] })
   }
 
-  async function markChecked() {
-    await supabase.from('recipes').update({ status: 'checked' }).eq('id', id)
-    refetch()
-    qc.invalidateQueries({ queryKey: ['recipes'] })
-  }
-
   async function remove() {
     if (!r || !confirm(`„${r.title}“ mit allen Bildern löschen?`)) return
     const folder = r.front_path?.replace(/\/front\.jpg$/, '')
@@ -82,7 +76,6 @@ export default function RecipeDetail() {
           )}
           {r.status === 'failed' && <p className="text-sm text-red-700">Auslesen fehlgeschlagen: {r.extraction_error}</p>}
           <div className="flex flex-wrap gap-2 pt-1">
-            {r.status === 'extracted' && <button className="btn-primary" onClick={markChecked}>Geprüft</button>}
             {(r.status === 'failed' || r.status === 'extracted') && <button className="btn-ghost" onClick={retry} disabled={!!busy}>{busy ?? 'Neu auslesen'}</button>}
             <button className="btn-ghost" onClick={() => setEditing((e) => !e)}>{editing ? 'Fertig' : 'Zutaten bearbeiten'}</button>
             {r.pdf_path && urls[r.pdf_path] && <a className="btn-ghost" href={urls[r.pdf_path]} target="_blank" rel="noreferrer">Original-PDF</a>}
