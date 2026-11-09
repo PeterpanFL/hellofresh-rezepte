@@ -24,9 +24,8 @@ Alle Namen beginnen mit `recipe`, damit das Schema neben anderen Apps im selben 
 3. Secret `ANTHROPIC_API_KEY` setzen. Optional `RECIPE_OCR_MODEL` (Standard `claude-opus-5-5`;
    `claude-haiku-5-5` ist deutlich günstiger).
 4. Lokal: `.env.local` nach `.env.example` anlegen, `npm install`, `npm run dev`.
-5. GitHub Pages: im Repo unter Settings → Pages „GitHub Actions“ wählen und unter Settings → Variables
-   `VITE_SUPABASE_URL` und `VITE_SUPABASE_ANON_KEY` anlegen. Jeder Push auf `main` deployt.
-   Die Pages-URL zusätzlich in Supabase unter Authentication → URL Configuration eintragen.
+5. GitHub Pages: im Repo unter Settings → Pages als Source „GitHub Actions“ wählen. Jeder Push auf `main` deployt.
+   Supabase-URL und Publishable Key für den Build stehen in `.env.production` (beide sind öffentlich gedacht).
 
 Anmeldung mit E-Mail und Passwort eines Supabase-Nutzers.
 
