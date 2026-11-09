@@ -29,6 +29,25 @@ Alle Namen beginnen mit `recipe`, damit das Schema neben anderen Apps im selben 
 
 Anmeldung mit E-Mail und Passwort eines Supabase-Nutzers.
 
+## Automatischer Upload vom Mac
+
+ScanSnap Home speichert die PDFs in einen Ordner. Ein kleiner Hintergrunddienst (launchd) lädt neue PDFs
+von dort in den Eingang (`recipe-scans/<user>/inbox/`) und verschiebt sie in den Unterordner `hochgeladen`.
+Die Web-App verarbeitet den Eingang, solange die Seite „Hinzufügen“ offen ist. Auf der Rezeptliste erscheint ein Hinweis, wenn neue Scans warten.
+
+Einrichten (einmal im Terminal, im Repo-Ordner):
+
+```bash
+bash scripts/mac/install.sh
+```
+
+Das Skript fragt nach Ordner, E-Mail und Passwort (landet im Schlüsselbund) und macht einen Testlauf. Protokoll: `~/Library/Logs/hellofresh-rezepte.log`.
+Entfernen: `bash scripts/mac/uninstall.sh`.
+
+Liegt der Scan-Ordner unter „Downloads“, „Dokumente“ oder „Schreibtisch“, kann macOS dem Hintergrunddienst den Zugriff verweigern
+(„Operation not permitted“ im Protokoll). Dann entweder in Systemeinstellungen → Datenschutz & Sicherheit → Festplattenvollzugriff
+`/bin/bash` hinzufügen, oder ScanSnap Home in einen Ordner außerhalb davon speichern lassen (z. B. `~/Scans/Hello Fresh`) und `install.sh` erneut ausführen.
+
 ## Kartenlayout
 
 Die Ausschnitte stehen in `LAYOUT` in `src/lib/pdf.ts` als Anteile der Seite, gemessen an Karte 52

@@ -24,6 +24,15 @@ export class DuplicateFileError extends Error {
   }
 }
 
+/** The recipe was stored, but reading its text failed; it can be retried from the detail page. */
+export class ExtractionError extends Error {
+  recipeId: string
+  constructor(recipeId: string, message: string) {
+    super(`Auslesen fehlgeschlagen: ${message}`)
+    this.recipeId = recipeId
+  }
+}
+
 async function sha256(blob: Blob): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
@@ -105,7 +114,7 @@ async function extractAndSave(id: string, front: Blob, back: Blob, onPhase: (p: 
     }
     await supabase.from('recipes').update({ status: 'failed', extraction_error: message }).eq('id', id)
     onPhase('error')
-    throw new Error(`Auslesen fehlgeschlagen: ${message}`)
+    throw new ExtractionError(id, message)
   }
 
   onPhase('save')

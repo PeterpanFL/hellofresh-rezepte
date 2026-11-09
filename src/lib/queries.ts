@@ -14,9 +14,10 @@ export function useRecipes(search: string) {
   return useQuery({
     queryKey: keys.recipes(search),
     queryFn: async () => {
-      let q = supabase.from('recipes').select('*').order('created_at', { ascending: false })
-      if (search.trim()) q = q.textSearch('search', search.trim(), { type: 'websearch', config: 'german' })
-      const { data, error } = await q
+      // recipe_search matches every typed word as a prefix, so results appear while typing.
+      const { data, error } = search.trim()
+        ? await supabase.rpc('recipe_search', { p_q: search.trim() })
+        : await supabase.from('recipes').select('*').order('created_at', { ascending: false })
       if (error) throw error
       return data as Recipe[]
     },

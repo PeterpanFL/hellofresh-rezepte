@@ -1,7 +1,9 @@
 import { useDeferredValue, useState } from 'react'
 import { Link } from 'react-router-dom'
 import RecipeCard from '../components/RecipeCard'
+import { useQuery } from '@tanstack/react-query'
 import { useRecipes, useSignedUrls } from '../lib/queries'
+import { listInbox } from '../lib/inbox'
 
 const DUP = '__dubletten'
 
@@ -11,6 +13,7 @@ export default function RecipeList() {
   const [tag, setTag] = useState<string | null>(null)
   const { data: recipes = [], isLoading, error } = useRecipes(deferred)
   const urls = useSignedUrls(recipes.map((r) => r.hero_path)).data ?? {}
+  const inbox = useQuery({ queryKey: ['inbox'], queryFn: listInbox, refetchInterval: 60_000 }).data ?? []
 
   const tags = [...new Set(recipes.flatMap((r) => r.tags))].sort((a, b) => a.localeCompare(b, 'de'))
   const dupCount = recipes.filter((r) => r.duplicate_of).length
@@ -18,6 +21,11 @@ export default function RecipeList() {
 
   return (
     <div className="space-y-4">
+      {inbox.length > 0 && (
+        <Link to="/scannen" className="block rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-900 ring-1 ring-sky-200">
+          {inbox.length === 1 ? '1 neuer Scan' : `${inbox.length} neue Scans`} aus dem Mac-Ordner. <span className="underline">Jetzt verarbeiten</span>
+        </Link>
+      )}
       <input className="input" type="search" placeholder="Suchen: Titel, Zutat, Schritt …" value={search} onChange={(e) => setSearch(e.target.value)} />
       {(tags.length > 0 || dupCount > 0) && (
         <div className="flex flex-wrap gap-1.5">
