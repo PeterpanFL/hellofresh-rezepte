@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import RecipeCard from '../components/RecipeCard'
 import { useRecipes, useSignedUrls } from '../lib/queries'
 
+const DUP = '__dubletten'
+
 export default function RecipeList() {
   const [search, setSearch] = useState('')
   const deferred = useDeferredValue(search)
@@ -11,16 +13,20 @@ export default function RecipeList() {
   const urls = useSignedUrls(recipes.map((r) => r.hero_path)).data ?? {}
 
   const tags = [...new Set(recipes.flatMap((r) => r.tags))].sort((a, b) => a.localeCompare(b, 'de'))
-  const shown = tag ? recipes.filter((r) => r.tags.includes(tag)) : recipes
+  const dupCount = recipes.filter((r) => r.duplicate_of).length
+  const shown = tag === DUP ? recipes.filter((r) => r.duplicate_of) : tag ? recipes.filter((r) => r.tags.includes(tag)) : recipes
 
   return (
     <div className="space-y-4">
       <input className="input" type="search" placeholder="Suchen: Titel, Zutat, Schritt …" value={search} onChange={(e) => setSearch(e.target.value)} />
-      {tags.length > 0 && (
+      {(tags.length > 0 || dupCount > 0) && (
         <div className="flex flex-wrap gap-1.5">
           {tags.map((t) => (
             <button key={t} onClick={() => setTag(tag === t ? null : t)} className={`chip ${tag === t ? 'bg-lime-800 text-white' : 'bg-stone-200 text-stone-700'}`}>{t}</button>
           ))}
+          {dupCount > 0 && (
+            <button onClick={() => setTag(tag === DUP ? null : DUP)} className={`chip ${tag === DUP ? 'bg-violet-700 text-white' : 'bg-violet-100 text-violet-800'}`}>Dubletten ({dupCount})</button>
+          )}
         </div>
       )}
       {error && <p className="text-sm text-red-700">{(error as Error).message}</p>}

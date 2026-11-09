@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { minutesLabel } from '../components/RecipeCard'
 import { reExtract, type ImportPhase } from '../lib/importRecipe'
@@ -75,6 +75,11 @@ export default function RecipeDetail() {
             {time && <span>{time}</span>}
             {r.kcal && <span>· {r.kcal} kcal</span>}
           </div>
+          {r.duplicate_of && (
+            <p className="rounded-lg bg-violet-50 px-3 py-2 text-sm text-violet-900">
+              Dieses Rezept gibt es schon. <Link to={`/rezept/${r.duplicate_of}`} className="underline">Zum älteren Scan</Link>; einen der beiden kannst du löschen.
+            </p>
+          )}
           {r.status === 'failed' && <p className="text-sm text-red-700">Auslesen fehlgeschlagen: {r.extraction_error}</p>}
           <div className="flex flex-wrap gap-2 pt-1">
             {r.status === 'extracted' && <button className="btn-primary" onClick={markChecked}>Geprüft</button>}

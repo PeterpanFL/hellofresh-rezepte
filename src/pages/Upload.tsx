@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { importRecipePdf, type ImportPhase } from '../lib/importRecipe'
+import { DuplicateFileError, importRecipePdf, type ImportPhase } from '../lib/importRecipe'
 
 interface Job { name: string; phase: ImportPhase | 'waiting'; id?: string; error?: string }
 
@@ -32,7 +32,7 @@ export default function Upload() {
         const id = await importRecipePdf(pdfs[i], (phase) => update(i, { phase }))
         update(i, { phase: 'done', id })
       } catch (e) {
-        update(i, { phase: 'error', error: (e as Error).message })
+        update(i, { phase: 'error', error: (e as Error).message, id: e instanceof DuplicateFileError ? e.existingId : undefined })
       }
       qc.invalidateQueries({ queryKey: ['recipes'] })
       qc.invalidateQueries({ queryKey: ['ingredient-names'] })

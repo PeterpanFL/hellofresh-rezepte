@@ -5,6 +5,7 @@
 --   Images live in the private bucket `recipe-scans` under <user_id>/<recipe_id>/...
 --   All names are prefixed with recipe_ so the schema can share a Supabase project
 --   with other apps.
+--   Duplicates: an identical PDF (SHA-256) is rejected; a different scan with the same title gets duplicate_of.
 --   Rollback: DROP FUNCTION recipe_match; DROP TABLE recipe_pantry, recipe_steps,
 --   recipe_ingredients, recipes; delete the bucket recipe-scans.
 
@@ -34,6 +35,8 @@ CREATE TABLE IF NOT EXISTS public.recipes (
   back_path        text,
   hero_path        text,
   ingredients_path text,
+  pdf_sha256       text,                          -- same file uploaded twice is rejected
+  duplicate_of     uuid REFERENCES public.recipes(id) ON DELETE SET NULL, -- same title as an older card
   search           tsvector,
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now()
@@ -41,6 +44,9 @@ CREATE TABLE IF NOT EXISTS public.recipes (
 
 CREATE INDEX IF NOT EXISTS recipes_user_idx ON public.recipes (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS recipes_search_idx ON public.recipes USING gin (search);
+CREATE UNIQUE INDEX IF NOT EXISTS recipes_user_pdf_sha256_idx ON public.recipes (user_id, pdf_sha256) WHERE pdf_sha256 IS NOT NULL;
+CREATE INDEX IF NOT EXISTS recipes_user_title_idx ON public.recipes (user_id, lower(title));
+CREATE INDEX IF NOT EXISTS recipes_duplicate_of_idx ON public.recipes (duplicate_of) WHERE duplicate_of IS NOT NULL;
 
 -- ---------------------------------------------------------------------------
 -- 2. Ingredients per recipe (amounts for 2, 3 and 4 persons as printed)

@@ -31,6 +31,7 @@ export default function RecipeCard({ recipe, imageUrl, footer }: { recipe: Recip
           {time && <span>{time}</span>}
           {recipe.kcal && <span>· {recipe.kcal} kcal</span>}
           {status && <span className={`chip ${status.cls}`}>{status.label}</span>}
+          {recipe.duplicate_of && <span className="chip bg-violet-100 text-violet-800">Dublette</span>}
         </div>
         {footer}
       </div>

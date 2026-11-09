@@ -15,6 +15,20 @@ export function isPantryStaple(name: string, pantryItems: string[] = []): boolea
 
 export type ImportPhase = 'render' | 'upload' | 'extract' | 'save' | 'done' | 'error'
 
+/** Thrown when exactly this PDF was imported before. */
+export class DuplicateFileError extends Error {
+  existingId: string
+  constructor(existingId: string, title: string) {
+    super(`Schon vorhanden: ${title}`)
+    this.existingId = existingId
+  }
+}
+
+async function sha256(blob: Blob): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 /**
  * Imports one scanned card: renders the PDF, cuts out hero / ingredients / step images, uploads everything,
  * has the Edge Function read the text and stores the result. A failed extraction keeps the recipe with
@@ -25,6 +39,10 @@ export async function importRecipePdf(file: File, onPhase: (p: ImportPhase) => v
   const userId = auth.user?.id
   if (!userId) throw new Error('Nicht angemeldet')
 
+  const hash = await sha256(file)
+  const { data: same } = await supabase.from('recipes').select('id, title').eq('pdf_sha256', hash).limit(1)
+  if (same?.length) throw new DuplicateFileError(same[0].id, same[0].title)
+
   onPhase('render')
   const pages = await renderPdfPages(file)
   if (pages.length < 2) throw new Error('Das PDF braucht Vorder- und Rückseite (2 Seiten).')
@@ -32,7 +50,7 @@ export async function importRecipePdf(file: File, onPhase: (p: ImportPhase) => v
 
   const { data: recipe, error } = await supabase
     .from('recipes')
-    .insert({ title: file.name.replace(/\.pdf$/i, ''), status: 'new' })
+    .insert({ title: file.name.replace(/\.pdf$/i, ''), status: 'new', pdf_sha256: hash })
     .select('id')
     .single()
   if (error) throw error
@@ -87,6 +105,10 @@ async function extractAndSave(id: string, front: Blob, back: Blob, onPhase: (p: 
 
   onPhase('save')
   const r = data.recipe
+  // A different scan of a card that is already stored: keep it, but point to the older one.
+  const { data: older } = await supabase
+    .from('recipes').select('id').ilike('title', r.title.replace(/[%_\\]/g, '\\$&')).neq('id', id)
+    .order('created_at').limit(1)
   const dir = (await supabase.from('recipes').select('front_path').eq('id', id).single()).data?.front_path?.replace(/\/front\.jpg$/, '')
   const { error: upErr } = await supabase.from('recipes').update({
     card_number: r.card_number,
@@ -101,6 +123,7 @@ async function extractAndSave(id: string, front: Blob, back: Blob, onPhase: (p: 
     allergens: r.allergens,
     status: 'extracted',
     extraction_error: null,
+    duplicate_of: older?.[0]?.id ?? null,
   }).eq('id', id)
   if (upErr) throw upErr
 

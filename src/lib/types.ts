@@ -19,6 +19,8 @@ export interface Recipe {
   back_path: string | null
   hero_path: string | null
   ingredients_path: string | null
+  pdf_sha256: string | null
+  duplicate_of: string | null
   created_at: string
 }
 
