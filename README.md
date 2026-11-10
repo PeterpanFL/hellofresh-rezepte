@@ -21,8 +21,8 @@ Alle Namen beginnen mit `recipe`, damit das Schema neben anderen Apps im selben 
 1. Migration `supabase/migrations/001_recipes.sql` im Supabase-Projekt ausführen (SQL-Editor oder `supabase db push`).
 2. Edge Function deployen: `supabase functions deploy recipe-ocr --no-verify-jwt`
    (die Funktion prüft den angemeldeten Nutzer selbst, wie `meter-ocr`).
-3. Secret `ANTHROPIC_API_KEY` setzen. Optional `RECIPE_OCR_MODEL` (Standard `claude-opus-5-5`;
-   `claude-haiku-5-5` ist Standard und kostet etwa 0,2 Cent pro Karte; `claude-opus-5-5` liest am sorgfältigsten, kostet aber etwa 5 Cent).
+3. Secret `ANTHROPIC_API_KEY` setzen. Optional `RECIPE_OCR_MODEL`:
+   `claude-haiku-5-5` ist Standard und kostet etwa 0,2 Cent pro Karte; `claude-opus-5-5` liest am sorgfältigsten, kostet aber etwa 5 Cent.
 4. Lokal: `.env.local` nach `.env.example` anlegen, `npm install`, `npm run dev`.
 5. GitHub Pages: im Repo unter Settings → Pages als Source „GitHub Actions“ wählen. Jeder Push auf `main` deployt.
    Supabase-URL und Publishable Key für den Build stehen in `.env.production` (beide sind öffentlich gedacht).
