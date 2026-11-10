@@ -2,15 +2,17 @@
 //
 // Same security model as `meter-ocr` in meine-finanzen: deploy with `verify_jwt: false` and let the function
 // verify the caller itself via GET /auth/v1/user, so only a signed-in user gets through before any Claude call.
-// Secrets: ANTHROPIC_API_KEY (required), RECIPE_OCR_MODEL (optional, defaults to claude-opus-5-5;
-// set it to claude-haiku-5-5 to make each card much cheaper).
+// Secrets: ANTHROPIC_API_KEY (required), RECIPE_OCR_MODEL (optional, defaults to claude-haiku-5-5, which costs
+// about a fortieth of claude-opus-5-5 per card; set it to claude-opus-5-5 for the most careful reading).
+// If the chosen model rejects the request outright (400), the card is read once more with claude-opus-5-5.
 // Called from the web app, so it answers CORS preflight requests.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import Anthropic from "npm:@anthropic-ai/sdk@^1.7.0"
 import { zodOutputFormat } from "npm:@anthropic-ai/sdk@^1.7.0/helpers/zod"
 import { z } from "npm:zod@^4.1.0"
 
-const MODEL = Deno.env.get("RECIPE_OCR_MODEL") || "claude-opus-5-5"
+const MODEL = Deno.env.get("RECIPE_OCR_MODEL") || "claude-haiku-5-5"
+const FALLBACK_MODEL = "claude-opus-5-5"
 const MAX_BODY_BYTES = 12 * 1024 * 1024 // two pages as base64; the app sends ~0.5–2 MB
 const CORS = {
   "access-control-allow-origin": "*",
@@ -100,20 +102,31 @@ Deno.serve(async (req) => {
     authToken: null,
     defaultHeaders: { "x-api-key": Deno.env.get("ANTHROPIC_API_KEY")!.trim() },
   })
+  // Reading printed text needs little reasoning, so low effort keeps the (billed) thinking short.
+  const read = (model: string) => client.messages.parse({
+    model,
+    max_tokens: 16000,
+    output_config: { effort: "low", format: zodOutputFormat(RecipeSchema) },
+    messages: [{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: front } },
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: back } },
+        { type: "text", text: PROMPT },
+      ],
+    }],
+  })
   try {
-    const response = await client.messages.parse({
-      model: MODEL,
-      max_tokens: 16000,
-      output_config: { format: zodOutputFormat(RecipeSchema) },
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: front } },
-          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: back } },
-          { type: "text", text: PROMPT },
-        ],
-      }],
-    })
+    let response
+    try {
+      response = await read(MODEL)
+    } catch (error) {
+      if (!(error instanceof Anthropic.BadRequestError) || MODEL === FALLBACK_MODEL) throw error
+      console.error("model rejected request, falling back", MODEL, error.message)
+      response = await read(FALLBACK_MODEL)
+    }
+    const u = response.usage
+    console.log(JSON.stringify({ model: response.model, input_tokens: u.input_tokens, output_tokens: u.output_tokens }))
     if (response.stop_reason === "refusal") return json({ error: "Recognition refused" }, 422)
     if (!response.parsed_output) return json({ error: "Recognition returned no data" }, 502)
     return json({ recipe: response.parsed_output, model: response.model })
